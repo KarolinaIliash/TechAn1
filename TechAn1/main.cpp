@@ -5,6 +5,7 @@
 #include <vector>
 #include <fstream>
 #include <string>
+#include <algorithm>
 
 std::vector<double> getData()
 {
@@ -76,6 +77,9 @@ void rewriteWithCommas(std::string from, std::string to)
 void calculateAll(std::vector<double> const& data, std::vector<double> & allEMA10, 
 	std::vector<double> & allEMA20, std::vector<double> &, std::vector<double> &, std::vector<double> &);
 
+void calc(std::vector<double> const& data, std::vector<double> & EMA3, std::vector<double> & EMA21,
+	std::vector<double> &, std::vector<double> &);
+
 void save(std::vector<double> const& data, std::string const& name)
 {
 	std::ofstream out(name);
@@ -100,8 +104,13 @@ int main()
 	std::vector<double> data = getData();
 
 	std::vector<double> firstEma, allEMA10, allEMA20, RSI_SMA, RSI_EMA, RSI_WSM;
-	calculateAll(data, allEMA10, allEMA20, RSI_SMA, RSI_EMA, RSI_WSM);
-
+	//calculateAll(data, allEMA10, allEMA20, RSI_SMA, RSI_EMA, RSI_WSM);
+	std::vector<double> EMA3, EMA21, AroonUp, AroonDown;
+	calc(data, EMA3, EMA21, AroonUp, AroonDown);
+	save(AroonUp, "AroonUp25.txt");
+	save(AroonDown, "AroonDown25.txt");
+	//save(EMA3, "EMA3.txt");
+	//save(EMA21, "EMA21.txt");
 	/*save(RSI_SMA, "RSI_SMA6.txt");
 	save(RSI_EMA, "RSI_EMA6.txt");
 	save(RSI_WSM, "RSI_WSM6.txt");*/
@@ -304,5 +313,124 @@ void calculateAll(std::vector<double> const& data, std::vector<double> & allEMA1
 			prevAvgU_WSM = avgU_WSM;
 			prevAvgD_WSM = avgD_WSM;
 		}
+	}
+}
+
+//TODO try give to RSI and roon not prices but their sma or ema (daily) maybe about 13 period 
+
+
+size_t findMaxIndex(std::vector<double> const& data, size_t from, size_t to)
+{
+	return std::distance(data.begin(), std::max_element(data.begin() + from, data.begin() + to));
+}
+
+size_t findMinIndex(std::vector<double> const& data, size_t from, size_t to)
+{
+	return std::distance(data.begin(), std::min_element(data.begin() + from, data.begin() + to));
+}
+
+void calc(std::vector<double> const& data, std::vector<double> & EMA3, std::vector<double> & EMA21, 
+	std::vector<double> & AroonUp, std::vector<double> & AroonDown)
+{
+	double sum5 = 0;
+	double avg5;
+
+	double prevEMA3;
+	double prevEMA21;
+	double SMA3 = 0;
+	double SMA21 = 0;
+
+	bool hadSMA3 = false;
+	bool hadSMA21 = false;
+
+	bool hadPrevEMA3 = false;
+	bool hadPrevEMA21 = false;
+
+	double curEMA3 = -1;
+	double curEMA21 = -1;
+
+	const double aroonPeriod = 25;
+	int indexMax = 0;
+	int indexMin = 0;
+
+	for (int i = 0; i < data.size(); i++)
+	{
+		if (i != 0 && i % 5 == 0)
+		{
+			avg5 = sum5 / 5;
+			sum5 = 0;
+			if (!hadSMA3)
+			{
+				SMA3 += avg5;
+				EMA3.push_back(data[i]);
+				if (i / 5 == 3)
+				{
+					SMA3 /= 3;
+					hadSMA3 = true;
+					prevEMA3 = SMA3;
+				}
+			}
+			else
+			{
+				/*double */curEMA3 = calculateEMA(avg5, 3, prevEMA3);
+				EMA3.push_back(curEMA3);
+			}
+
+
+			if (!hadSMA21)
+			{
+				SMA21 += avg5;
+				EMA21.push_back(data[i]);
+				if (i / 5 == 21)
+				{
+					SMA21 /= 21;
+					hadSMA21 = true;
+					prevEMA21 = SMA21;
+				}
+			}
+			else
+			{
+				/*double */curEMA21 = calculateEMA(avg5, 21, prevEMA21);
+				EMA21.push_back(curEMA21);
+			}
+
+		}
+		else
+		{
+			if (curEMA3 != -1)
+			{
+				EMA3.push_back(curEMA3);
+			}
+			else
+			{
+				EMA3.push_back(data[i]);
+			}
+			if (curEMA21 != -1)
+			{
+				EMA21.push_back(curEMA21);
+			}
+			else
+			{
+				EMA21.push_back(data[i]);
+			}
+		}
+		sum5 += data[i];
+
+
+		//aroon calc
+		if (i != 0 && i < aroonPeriod)
+		{
+
+		}
+
+		else if(i >= aroonPeriod)
+		{
+			double curAroonUp = ((aroonPeriod - (i - findMaxIndex(data, i - aroonPeriod, i))) / aroonPeriod) * 100;
+			double curAroonDown = ((aroonPeriod - (i - findMinIndex(data, i - aroonPeriod, i))) / aroonPeriod) * 100;
+
+			AroonUp.push_back(curAroonUp);
+			AroonDown.push_back(curAroonDown);
+		}
+
 	}
 }
