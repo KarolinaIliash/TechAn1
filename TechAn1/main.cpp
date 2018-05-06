@@ -81,6 +81,7 @@ void calc(std::vector<double> const& data, std::vector<double> & EMA3, std::vect
 	std::vector<double> &, std::vector<double> &);
 
 void calcSmoothEMA(std::vector<double> const& data, std::vector<double> & EMA, int const& period, int const& daysAmount);
+void calcSmoothEMA_1_1(std::vector<double> const& data, std::vector<double> & EMA, int const& period, int const& daysAmount);
 
 void save(std::vector<double> const& data, std::string const& name)
 {
@@ -120,10 +121,12 @@ void main()
 	//save(AroonUp, "AroonUp13.txt");
 	//save(AroonDown, "AroonDown13.txt");
 
-	std::vector<double> EMA3;
-	calcSmoothEMA(data, EMA3, 3, 5);
+	std::vector<double> EMA;
+	calcSmoothEMA_1_1(data, EMA, 21, 5);
+	save(EMA, "EMA21smooth_v1_1.txt");
 
-	save(EMA3, "EMA3smooth.txt");
+	//save(EMA3, "EMA3.txt");
+	//save(EMA21, "EMA21.txt");
 
 	//save(EMA3, "EMA3.txt");
 	//save(EMA21, "EMA21.txt");
@@ -203,6 +206,7 @@ void calculateAll(std::vector<double> const& data, std::vector<double> & allEMA1
 			{
 				/*double */curEMA10 = calculateEMA(avg5, 10, prevEMA10);
 				allEMA10.push_back(curEMA10);
+				prevEMA10 = curEMA10;
 			}
 
 
@@ -221,6 +225,7 @@ void calculateAll(std::vector<double> const& data, std::vector<double> & allEMA1
 			{
 				/*double */curEMA20 = calculateEMA(avg5, 20, prevEMA20);
 				allEMA20.push_back(curEMA20);
+				prevEMA20 = curEMA20;
 			}
 
 		}
@@ -390,6 +395,7 @@ void calc(std::vector<double> const& data, std::vector<double> & EMA3, std::vect
 			{
 				/*double */curEMA3 = calculateEMA(avg5, 3, prevEMA3);
 				EMA3.push_back(curEMA3);
+				prevEMA3 = curEMA3;
 			}
 
 
@@ -408,6 +414,7 @@ void calc(std::vector<double> const& data, std::vector<double> & EMA3, std::vect
 			{
 				/*double */curEMA21 = calculateEMA(avg5, 21, prevEMA21);
 				EMA21.push_back(curEMA21);
+				prevEMA21 = curEMA21;
 			}
 
 		}
@@ -462,8 +469,11 @@ void calcSmoothEMA(std::vector<double> const& data, std::vector<double> & EMA, i
 	//std::vector<int> sum(daysAmount, 0);
 	double sum = 0;
 	std::vector<double> SMA(daysAmount, 0);
+	//double SMA;
 	std::vector<double> prevEMA(daysAmount, 0);
+	//double prevEMA = 0;
 	std::vector<int> hadSMA(daysAmount, 0);
+	//bool hadSMA = false;
 	//int SMA;
 	//int prevEMA;
 	//
@@ -490,7 +500,7 @@ void calcSmoothEMA(std::vector<double> const& data, std::vector<double> & EMA, i
 
 			double avg = sum / double(daysAmount);
 
-			if (!hadSMA[count])
+			if (!hadSMA[count]/*&& (i + 1) % daysAmount == 0*/)
 			{
 				SMA[count] += avg;
 
@@ -512,6 +522,7 @@ void calcSmoothEMA(std::vector<double> const& data, std::vector<double> & EMA, i
 			else
 			{
 				double curEMA = calculateEMA(data[i], period, prevEMA[count]);
+				prevEMA[count] = curEMA;
 				EMA.push_back(curEMA);
 			}
 		}
@@ -523,6 +534,96 @@ void calcSmoothEMA(std::vector<double> const& data, std::vector<double> & EMA, i
 			if (i == daysAmount - 1)
 			{
 				SMA[i] += sum / double(daysAmount);
+			}
+		}
+	}
+}
+
+void calcSmoothEMA_1_1(std::vector<double> const& data, std::vector<double> & EMA, int const& period, int const& daysAmount)
+{
+	//int sum = 0;
+	//int sum1Middle = 0;
+	//int sum2Middle = 0;
+	//int sum3Middle = 0;
+	//int sum4Middle = 0;
+
+	//std::vector<int> sum(daysAmount, 0);
+	double sum = 0;
+	//std::vector<double> SMA(daysAmount, 0);
+	double SMA = 0;
+	//std::vector<double> prevEMA(daysAmount, 0);
+	double prevEMA = 0;
+	//std::vector<int> hadSMA(daysAmount, 0);
+	bool hadSMA = false;
+	//int SMA;
+	//int prevEMA;
+	//
+	//int SMA1Middle;
+	//int prevEMA1Middle;
+	//
+	//int SMA2Middle;
+	//int prevEMA2Middle;
+	//
+	//int SMA3Middle;
+	//int prevEMA3Middle;
+	//
+	//int SMA4Middle;
+	//int prevEMA4Middle;
+
+	for (int i = 0; i < data.size(); i++)
+	{
+		if (i > daysAmount - 1)
+		{
+
+			int count = i % daysAmount;
+			sum += data[i];
+			sum -= data[i - daysAmount];
+
+			double avg = sum / double(daysAmount);
+
+			if (!hadSMA/*[count]*/&& (i + 1) % daysAmount == 0)
+			{
+				SMA/*[count]*/ += avg;
+
+
+				if ((i + 1) / daysAmount == period)
+				{
+					SMA/*[count]*/ /= double(period);
+					hadSMA/*[count]*/ = 1;
+
+					prevEMA/*[count]*/ = SMA/*[count]*/;
+
+					EMA.push_back(SMA/*[count]*/);
+				}
+				else
+				{
+					EMA.push_back(data[i]);
+				}
+			}
+			else if(hadSMA)
+			{
+				double curEMA = calculateEMA(data[i], period, prevEMA/*[count]*/);
+				//prevEMA/*[count]*/ = curEMA;
+				if ((i + 1) % daysAmount == 0)
+				{
+					prevEMA = curEMA;
+				}
+				EMA.push_back(curEMA);
+			}
+
+			else
+			{
+				EMA.push_back(data[i]);
+			}
+		}
+		else
+		{
+			sum += data[i];
+			EMA.push_back(data[i]);
+
+			if (i == daysAmount - 1)
+			{
+				SMA/*[i]*/ += sum / double(daysAmount);
 			}
 		}
 	}
