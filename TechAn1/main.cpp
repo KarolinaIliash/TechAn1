@@ -7,9 +7,9 @@
 #include <string>
 #include <algorithm>
 
-std::vector<double> getData()
+std::vector<double> getData(std::string fileName)
 {
-	std::ifstream in("prices.txt");
+	std::ifstream in(fileName);
 	std::vector<double> data;
 	while (!in.eof())
 	{
@@ -80,6 +80,8 @@ void calculateAll(std::vector<double> const& data, std::vector<double> & allEMA1
 void calc(std::vector<double> const& data, std::vector<double> & EMA3, std::vector<double> & EMA21,
 	std::vector<double> &, std::vector<double> &);
 
+void calcSmoothEMA(std::vector<double> const& data, std::vector<double> & EMA, int const& period, int const& daysAmount);
+
 void save(std::vector<double> const& data, std::string const& name)
 {
 	std::ofstream out(name);
@@ -98,17 +100,31 @@ void save(std::vector<double> const& data, std::string const& name)
 	out.close();
 }
 
-int main() 
+void main_()
+{
+	rewriteWithCommas("pricesUSD.txt", "pricesUSDComma.txt");
+}
+
+void main() 
 {
 	//std::string res = getData("EUR", "20180424", true);
-	std::vector<double> data = getData();
+	//std::string fileName = "pricesComma.txt";
+	//std::string fileName = "pricesUSDComma.txt";
+	std::string fileName = "prices.txt";
+	std::vector<double> data = getData(fileName);
 
-	std::vector<double> firstEma, allEMA10, allEMA20, RSI_SMA, RSI_EMA, RSI_WSM;
+	//std::vector<double> firstEma, allEMA10, allEMA20, RSI_SMA, RSI_EMA, RSI_WSM;
 	//calculateAll(data, allEMA10, allEMA20, RSI_SMA, RSI_EMA, RSI_WSM);
-	std::vector<double> EMA3, EMA21, AroonUp, AroonDown;
-	calc(data, EMA3, EMA21, AroonUp, AroonDown);
-	save(AroonUp, "AroonUp25.txt");
-	save(AroonDown, "AroonDown25.txt");
+	//std::vector<double> EMA3, EMA21, AroonUp, AroonDown;
+	//calc(data, EMA3, EMA21, AroonUp, AroonDown);
+	//save(AroonUp, "AroonUp13.txt");
+	//save(AroonDown, "AroonDown13.txt");
+
+	std::vector<double> EMA3;
+	calcSmoothEMA(data, EMA3, 3, 5);
+
+	save(EMA3, "EMA3smooth.txt");
+
 	//save(EMA3, "EMA3.txt");
 	//save(EMA21, "EMA21.txt");
 	/*save(RSI_SMA, "RSI_SMA6.txt");
@@ -349,7 +365,7 @@ void calc(std::vector<double> const& data, std::vector<double> & EMA3, std::vect
 	double curEMA3 = -1;
 	double curEMA21 = -1;
 
-	const double aroonPeriod = 25;
+	const double aroonPeriod = 13;//55;//25;
 	int indexMax = 0;
 	int indexMin = 0;
 
@@ -432,5 +448,82 @@ void calc(std::vector<double> const& data, std::vector<double> & EMA3, std::vect
 			AroonDown.push_back(curAroonDown);
 		}
 
+	}
+}
+
+void calcSmoothEMA(std::vector<double> const& data, std::vector<double> & EMA, int const& period, int const& daysAmount)
+{
+	//int sum = 0;
+	//int sum1Middle = 0;
+	//int sum2Middle = 0;
+	//int sum3Middle = 0;
+	//int sum4Middle = 0;
+
+	//std::vector<int> sum(daysAmount, 0);
+	double sum = 0;
+	std::vector<double> SMA(daysAmount, 0);
+	std::vector<double> prevEMA(daysAmount, 0);
+	std::vector<int> hadSMA(daysAmount, 0);
+	//int SMA;
+	//int prevEMA;
+	//
+	//int SMA1Middle;
+	//int prevEMA1Middle;
+	//
+	//int SMA2Middle;
+	//int prevEMA2Middle;
+	//
+	//int SMA3Middle;
+	//int prevEMA3Middle;
+	//
+	//int SMA4Middle;
+	//int prevEMA4Middle;
+
+	for (int i = 0; i < data.size(); i++)
+	{
+		if (i > daysAmount - 1)
+		{
+
+			int count = i % daysAmount;
+			sum += data[i];
+			sum -= data[i - daysAmount];
+
+			double avg = sum / double(daysAmount);
+
+			if (!hadSMA[count])
+			{
+				SMA[count] += avg;
+
+
+				if ((i+1) / daysAmount == period)
+				{
+					SMA[count] /= double(period);
+					hadSMA[count] = 1;
+
+					prevEMA[count] = SMA[count];
+
+					EMA.push_back(SMA[count]);
+				}
+				else
+				{
+					EMA.push_back(data[i]);
+				}
+			}
+			else
+			{
+				double curEMA = calculateEMA(data[i], period, prevEMA[count]);
+				EMA.push_back(curEMA);
+			}
+		}
+		else
+		{
+			sum += data[i];
+			EMA.push_back(data[i]);
+
+			if (i == daysAmount - 1)
+			{
+				SMA[i] += sum / double(daysAmount);
+			}
+		}
 	}
 }
