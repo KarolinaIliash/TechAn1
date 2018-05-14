@@ -83,6 +83,10 @@ void calc(std::vector<double> const& data, std::vector<double> & EMA3, std::vect
 void calcSmoothEMA(std::vector<double> const& data, std::vector<double> & EMA, int const& period, int const& daysAmount);
 void calcSmoothEMA_1_1(std::vector<double> const& data, std::vector<double> & EMA, int const& period, int const& daysAmount);
 
+void calcDispersion(std::vector<double> const& prices, int daysAmount, int period, std::vector<double> & dispersion, bool isEMA = true);
+
+void calcSMA(std::vector<double> const& prices, int daysAmount, int period, std::vector<double> & SMA);
+
 void save(std::vector<double> const& data, std::string const& name)
 {
 	std::ofstream out(name);
@@ -101,10 +105,47 @@ void save(std::vector<double> const& data, std::string const& name)
 	out.close();
 }
 
+template<typename T>
+void save(std::vector<T> const& data, std::string const& name)
+{
+	std::ofstream out(name);
+
+	int i = 0;
+
+	for (T elem : data)
+	{
+		if (i > 0)
+		{
+			out << std::endl;
+		}
+
+		out << elem;
+		i++;
+	}
+	out.close();
+}
+
 void main_()
 {
 	rewriteWithCommas("pricesUSD.txt", "pricesUSDComma.txt");
 }
+
+enum TrendDirection
+{
+	UP,
+	WARNING_UP,
+	NON,
+	WARNING_DOWN,
+	DOWN
+};
+
+
+void calcEMATrendDirection(std::vector<double> const& prices, std::vector<TrendDirection> & direction,
+	int shortPeriod, int longPeriod, int shortDaysAmount, int longDaysAmount, int deltaPeriod, int lookBackPeriod,
+	std::vector<double> & shortEMA, std::vector<double> & longEMA);
+
+void calcADX(std::vector<double> const& prices, int const& period, int const& daysAmount, std::vector<double> & ADX,
+	std::vector<double> & positiveDI, std::vector<double> & negativeDI);
 
 void main() 
 {
@@ -121,9 +162,42 @@ void main()
 	//save(AroonUp, "AroonUp13.txt");
 	//save(AroonDown, "AroonDown13.txt");
 
-	std::vector<double> EMA;
-	calcSmoothEMA_1_1(data, EMA, 21, 5);
-	save(EMA, "EMA21smooth_v1_1.txt");
+	std::vector<double> shortEMA;
+	std::vector<double> longEMA;
+	std::vector<TrendDirection> direction;
+
+
+	std::vector<double> ADX;
+	std::vector<double> positiveDI;
+	std::vector<double> negativeDI;
+
+	calcADX(data, 7, 5, ADX, positiveDI, negativeDI);
+
+	save(ADX, "ADX_7_per5day.txt");
+	save(positiveDI, "positiveDI_7_per5day.txt");
+	save(negativeDI, "negativeDI_7_per5day.txt");
+
+	/*calcEMATrendDirection(data, direction, 1, 3, 1, 5, 15, 5, shortEMA, longEMA);
+	save(direction, "EMA1per1_3_Delta_15_5_direction.txt");*/
+	//save(shortEMA, "EMA1_per1day.txt");
+
+	/*calcEMATrendDirection(data, direction, 3, 21, 5, 5, 21, 7, shortEMA, longEMA);
+
+	save(direction, "EMA3_21_Delta_21_7_direction.txt");*/
+	//save(shortEMA, "EMA3_per5day.txt");
+	//save(longEMA, "EMA21_per5day.txt");
+
+//	std::vector<double> SMA;
+	//calcSMA(data, 5, 21, SMA);
+	//save(SMA, "SMA21.txt");
+	//std::vector<double> Disp;
+
+	//calcDispersion(data, 5, 21, Disp, false);
+	//save(Disp, "DispersionSMA21.txt");
+	//calcSmoothEMA(data, EMA, 21, 5);
+	//save(EMA, "smoothEMA21PerDay.txt");
+	//calcSmoothEMA_1_1(data, EMA, 21, 5);
+	//save(EMA, "EMA21smooth_v1_1.txt");
 
 	//save(EMA3, "EMA3.txt");
 	//save(EMA21, "EMA21.txt");
@@ -350,6 +424,19 @@ size_t findMinIndex(std::vector<double> const& data, size_t from, size_t to)
 	return std::distance(data.begin(), std::min_element(data.begin() + from, data.begin() + to));
 }
 
+template<typename T>
+T findMax(std::vector<T> const& data, size_t from, size_t to)
+{
+	return *std::max_element(data.begin() + from, data.begin() + to);
+}
+
+
+template<typename T>
+T findMin(std::vector<T> const& data, size_t from, size_t to)
+{
+	return *std::min_element(data.begin() + from, data.begin() + to);
+}
+
 void calc(std::vector<double> const& data, std::vector<double> & EMA3, std::vector<double> & EMA21, 
 	std::vector<double> & AroonUp, std::vector<double> & AroonDown)
 {
@@ -458,6 +545,62 @@ void calc(std::vector<double> const& data, std::vector<double> & EMA3, std::vect
 	}
 }
 
+
+void calcSmoothEMAForDay(double data, double data_to_delete, std::vector<double> & EMA, int i, int daysAmount, int period,
+	std::vector <double> & SMA, std::vector<double> & prevEMA, std::vector<bool> & hasSMA, double & sum)
+{
+	//static double sum = 0;
+	//static std::vector<double> SMA(daysAmount, 0);
+	//static std::vector<double> prevEMA(daysAmount, 0);
+	//static std::vector<bool> hasSMA(daysAmount, false);
+
+	if (i > daysAmount - 1)
+	{
+
+		int count = i % daysAmount;
+		sum += data;
+		sum -= data_to_delete;//data[i - daysAmount];
+
+		double avg = sum / double(daysAmount);
+
+		if (!hasSMA[count]/*&& (i + 1) % daysAmount == 0*/)
+		{
+			SMA[count] += avg;
+
+			if ((i + 1) / daysAmount == period)
+			{
+				SMA[count] /= double(period);
+				hasSMA[count] = true;
+
+				prevEMA[count] = SMA[count];
+
+				EMA.push_back(SMA[count]);
+			}
+			else
+			{
+				EMA.push_back(data);
+			}
+		}
+		else
+		{
+			double curEMA = calculateEMA(data, period, prevEMA[count]);
+			prevEMA[count] = curEMA;
+			EMA.push_back(curEMA);
+		}
+	}
+	else
+	{
+		sum += data;
+		EMA.push_back(data);
+
+		if (i == daysAmount - 1)
+		{
+			SMA[i] += sum / double(daysAmount);
+		}
+	}
+}
+
+
 void calcSmoothEMA(std::vector<double> const& data, std::vector<double> & EMA, int const& period, int const& daysAmount)
 {
 	//int sum = 0;
@@ -467,12 +610,12 @@ void calcSmoothEMA(std::vector<double> const& data, std::vector<double> & EMA, i
 	//int sum4Middle = 0;
 
 	//std::vector<int> sum(daysAmount, 0);
-	double sum = 0;
-	std::vector<double> SMA(daysAmount, 0);
+	//double sum = 0;
+	//std::vector<double> SMA(daysAmount, 0);
 	//double SMA;
-	std::vector<double> prevEMA(daysAmount, 0);
+//	std::vector<double> prevEMA(daysAmount, 0);
 	//double prevEMA = 0;
-	std::vector<int> hadSMA(daysAmount, 0);
+	//std::vector<int> hadSMA(daysAmount, 0);
 	//bool hadSMA = false;
 	//int SMA;
 	//int prevEMA;
@@ -489,53 +632,63 @@ void calcSmoothEMA(std::vector<double> const& data, std::vector<double> & EMA, i
 	//int SMA4Middle;
 	//int prevEMA4Middle;
 
+
+	double sum = 0;
+	std::vector<double> SMA(daysAmount, 0);
+	std::vector<double> prevEMA(daysAmount, 0);
+	std::vector<bool> hasSMA(daysAmount, false);
+
 	for (int i = 0; i < data.size(); i++)
 	{
 		if (i > daysAmount - 1)
-		{
-
-			int count = i % daysAmount;
-			sum += data[i];
-			sum -= data[i - daysAmount];
-
-			double avg = sum / double(daysAmount);
-
-			if (!hadSMA[count]/*&& (i + 1) % daysAmount == 0*/)
-			{
-				SMA[count] += avg;
-
-
-				if ((i+1) / daysAmount == period)
-				{
-					SMA[count] /= double(period);
-					hadSMA[count] = 1;
-
-					prevEMA[count] = SMA[count];
-
-					EMA.push_back(SMA[count]);
-				}
-				else
-				{
-					EMA.push_back(data[i]);
-				}
-			}
-			else
-			{
-				double curEMA = calculateEMA(data[i], period, prevEMA[count]);
-				prevEMA[count] = curEMA;
-				EMA.push_back(curEMA);
-			}
-		}
+			calcSmoothEMAForDay(data[i], data[i - daysAmount], EMA, i, daysAmount, period, SMA, prevEMA, hasSMA, sum);
 		else
-		{
-			sum += data[i];
-			EMA.push_back(data[i]);
+			calcSmoothEMAForDay(data[i], 0, EMA, i, daysAmount, period, SMA, prevEMA, hasSMA, sum);
+		//if (i > daysAmount - 1)
+		//{
 
-			if (i == daysAmount - 1)
-			{
-				SMA[i] += sum / double(daysAmount);
-			}
-		}
+		//	int count = i % daysAmount;
+		//	sum += data[i];
+		//	sum -= data[i - daysAmount];
+
+		//	double avg = sum / double(daysAmount);
+
+		//	if (!hadSMA[count]/*&& (i + 1) % daysAmount == 0*/)
+		//	{
+		//		SMA[count] += avg;
+
+
+		//		if ((i+1) / daysAmount == period)
+		//		{
+		//			SMA[count] /= double(period);
+		//			hadSMA[count] = 1;
+
+		//			prevEMA[count] = SMA[count];
+
+		//			EMA.push_back(SMA[count]);
+		//		}
+		//		else
+		//		{
+		//			EMA.push_back(data[i]);
+		//		}
+		//	}
+		//	else
+		//	{
+		//		double curEMA = calculateEMA(data[i], period, prevEMA[count]);
+		//		prevEMA[count] = curEMA;
+		//		EMA.push_back(curEMA);
+		//	}
+		//}
+		//else
+		//{
+		//	sum += data[i];
+		//	EMA.push_back(data[i]);
+
+		//	if (i == daysAmount - 1)
+		//	{
+		//		SMA[i] += sum / double(daysAmount);
+		//	}
+		//}
 	}
 }
 
@@ -624,6 +777,469 @@ void calcSmoothEMA_1_1(std::vector<double> const& data, std::vector<double> & EM
 			if (i == daysAmount - 1)
 			{
 				SMA/*[i]*/ += sum / double(daysAmount);
+			}
+		}
+	}
+}
+
+
+double calcSMAPerDay(double data, double dataToDelete, int daysAmount, int period, int i)
+{
+	static double sum = 0;
+	static std::vector<double> SMAdays(daysAmount, 0);
+	static std::vector<double> averages;
+
+	if (i > daysAmount - 1)
+	{
+
+		sum += data;
+		sum -= dataToDelete;
+
+		int count = i % daysAmount;
+
+		double avg = sum / double(daysAmount);
+		averages.push_back(avg);
+
+		if ((i + 1) / daysAmount >= period)
+		{
+			SMAdays[count] += avg;
+
+
+			SMAdays[count] -= averages[i - daysAmount * period + 1];
+
+			return SMAdays[count] / period;
+		}
+		else
+		{
+			SMAdays[count] += avg;
+			return data;
+		}
+
+	}
+	else
+	{
+		sum += data;
+
+		if (i == daysAmount - 1)
+		{
+			double avg = sum / double(daysAmount);
+			averages.push_back(avg);
+			SMAdays[i] += avg;
+		}
+
+		return data;
+	}
+}
+
+void calcSMA(std::vector<double> const& prices, int daysAmount, int period, std::vector<double> & SMA)
+{
+	for (int i = 0; i < prices.size(); i++)
+	{
+		double dataTodelete = 0;
+		if (i > daysAmount - 1)
+			dataTodelete = prices[i - daysAmount];
+
+		SMA.push_back(calcSMAPerDay(prices[i], dataTodelete, daysAmount, period, i));
+	}
+}
+
+double calcDispersionPerDay(double data, double dataToDelete, double EMAToDelete, double EMA, int daysAmount, int period, int i)
+{
+	static double sum = 0;
+	static std::vector<double> prevDispersion(daysAmount, 0);
+	static std::vector<double> dispersion(daysAmount, 0);
+
+	int count = i % daysAmount;
+
+	static std::vector<double> averages;
+
+	if (i > daysAmount - 1)
+	{
+		sum += data;
+		sum -= dataToDelete;
+
+		double avg = sum / double(daysAmount);
+		averages.push_back(avg);
+
+		if ((i + 1) / daysAmount >= period)
+		{
+			dispersion[count] += pow(avg - EMA, 2);
+
+
+			dispersion[count] -= pow(averages[i - daysAmount * period + 1] - EMAToDelete, 2);
+
+			return dispersion[count] / (period - 1);
+		}
+		else
+		{
+			dispersion[count] += pow(avg - EMA, 2);
+			return 0;
+		}
+
+	}
+	else // we can't calculate average yet
+	{
+		sum += data;
+
+		if (i == daysAmount - 1)
+		{
+			double avg = sum / double(daysAmount);
+			averages.push_back(avg);
+			dispersion[i] += pow(avg - EMA, 2);
+		}
+		return 0;
+	}
+}
+
+
+void calcDispersion(std::vector<double> const& prices, int daysAmount, int period, std::vector<double> & dispersion, bool isEMA/* = true*/)
+{
+	std::vector<double> MA;
+
+	double sum = 0;
+	std::vector<double> SMA(daysAmount, 0);
+	std::vector<double> prevEMA(daysAmount, 0);
+	std::vector<bool> hasSMA(daysAmount, false);
+
+	for (int i = 0; i < prices.size(); i++)
+	{
+		double disp = 0;
+		if (i > daysAmount - 1)
+		{
+			if (isEMA)
+				calcSmoothEMAForDay(prices[i], prices[i - daysAmount], MA, i, daysAmount, period,
+					SMA, prevEMA, hasSMA, sum);
+			else
+				MA.push_back(calcSMAPerDay(prices[i], prices[i - daysAmount], daysAmount, period, i));
+
+			if ((i + 1) / daysAmount >= period)
+				disp = calcDispersionPerDay(prices[i], prices[i - daysAmount], MA[i - daysAmount * period + 1], MA[i], daysAmount, period, i);
+			else
+				disp = calcDispersionPerDay(prices[i], prices[i - daysAmount], 0, MA[i], daysAmount, period, i);
+		}
+		else
+		{
+			if (isEMA)
+				calcSmoothEMAForDay(prices[i], 0, MA, i, daysAmount, period,
+					SMA, prevEMA, hasSMA, sum);
+			else
+				MA.push_back(calcSMAPerDay(prices[i], 0, daysAmount, period, i));
+
+			disp = calcDispersionPerDay(prices[i], 0, prices[i], MA[i], daysAmount, period, i);
+		}
+
+		dispersion.push_back(disp);
+	}
+}
+
+void calcEMATrendDirection(std::vector<double> const& prices, std::vector<TrendDirection> & direction, 
+						   int shortPeriod, int longPeriod, int shortDaysAmount, int longDaysAmount, int deltaPeriod, int lookBackPeriod,
+						   std::vector<double> & shortEMA, std::vector<double> & longEMA)
+{
+	std::vector<double> deltas;
+	//std::vector<double> shortEMA;
+	//std::vector<double> longEMA;
+	std::vector<double> dispDelta;
+	std::vector<double> deltaSMA;
+
+	double shortSum = 0;
+	std::vector<double> shortSMA(shortDaysAmount, 0);
+	std::vector<double> shortPrevEMA(shortDaysAmount, 0);
+	std::vector<bool> shortHasSMA(shortDaysAmount, false);
+	
+	double longSum = 0;
+	std::vector<double> longSMA(longDaysAmount, 0);
+	std::vector<double> longPrevEMA(longDaysAmount, 0);
+	std::vector<bool> longHasSMA(longDaysAmount, false);
+
+
+
+	for (int i = 0; i < prices.size(); i++)
+	{
+		if (i > shortDaysAmount - 1)
+			calcSmoothEMAForDay(prices[i], prices[i - shortDaysAmount], shortEMA, i, shortDaysAmount, shortPeriod,
+				shortSMA, shortPrevEMA, shortHasSMA, shortSum);
+		else
+			calcSmoothEMAForDay(prices[i], 0, shortEMA, i, shortDaysAmount, shortPeriod,
+				shortSMA, shortPrevEMA, shortHasSMA, shortSum);
+
+		if (i > longDaysAmount - 1)
+			calcSmoothEMAForDay(prices[i], prices[i - longDaysAmount], longEMA, i, longDaysAmount, longPeriod,
+				longSMA, longPrevEMA, longHasSMA, longSum);
+		else
+			calcSmoothEMAForDay(prices[i], 0, longEMA, i, longDaysAmount, longPeriod,
+				longSMA, longPrevEMA, longHasSMA, longSum);
+
+		double delta = shortEMA[i] - longEMA[i];
+
+		deltas.push_back(delta);
+
+		if (i > longDaysAmount * longPeriod - 1) //+ lookBackPeriod)//(i > 0)
+		{
+			if (delta - deltaSMA[i - 1] >= dispDelta[i - 1])
+			{
+				bool everyMoreThenHalfOfSigma = true;
+
+				for (int k = 1; k <= lookBackPeriod; k++)
+				{
+					if (deltas[i - k] < dispDelta[i - 1] / 2.)
+					{
+						everyMoreThenHalfOfSigma = false;
+						break;
+					}
+				}
+
+
+				if (everyMoreThenHalfOfSigma)
+				{
+					if (delta - deltaSMA[i - 1] >= 2 * dispDelta[i - 1])
+					{
+						direction.push_back(TrendDirection::UP);
+					}
+					else
+					{
+						direction.push_back(TrendDirection::WARNING_UP);
+					}
+				}
+				else
+				{
+					direction.push_back(TrendDirection::NON);
+				}
+			}
+
+			else if (delta - deltaSMA[i - 1] <= -dispDelta[i - 1])
+			{
+				bool everyLessThenHalfOfSigma = true;
+				for (int k = 1; k <= lookBackPeriod; k++)
+				{
+					if (deltas[i - k] > -dispDelta[i - 1] / 2.)
+					{
+						everyLessThenHalfOfSigma = false;
+						break;
+					}
+				}
+
+				if (everyLessThenHalfOfSigma)
+				{
+					if (delta - deltaSMA[i - 1] <= -2 * dispDelta[i - 1])
+					{
+						direction.push_back(TrendDirection::DOWN);
+					}
+					else
+					{
+						direction.push_back(TrendDirection::WARNING_DOWN);
+					}
+				}
+				else
+				{
+					direction.push_back(TrendDirection::NON);
+				}
+			}
+			else
+			{
+				direction.push_back(TrendDirection::NON);
+			}
+		}
+		double disp = 0;
+		if (i > 0)
+		{
+			
+			deltaSMA.push_back(calcSMAPerDay(deltas[i], deltas[i - 1], 1, deltaPeriod, i));
+
+			if ((i + 1) >= deltaPeriod)
+				disp = calcDispersionPerDay(deltas[i], deltas[i - 1], deltaSMA[i - deltaPeriod + 1], deltaSMA[i], 1, deltaPeriod, i);
+			else
+				disp = calcDispersionPerDay(deltas[i], deltas[i - 1], 0, deltaSMA[i], 1, deltaPeriod, i);
+		}
+		else
+		{
+			deltaSMA.push_back(calcSMAPerDay(deltas[i], 0, 1, deltaPeriod, i));
+
+			disp = calcDispersionPerDay(deltas[i], 0, deltas[i], deltaSMA[i], 1, deltaPeriod, i);
+		}
+
+		dispDelta.push_back(disp);
+	}
+}
+
+void calcADX(std::vector<double> const& prices, int const& period, int const& daysAmount, std::vector<double> & ADX,
+	std::vector<double> & positiveDI, std::vector<double> & negativeDI)
+{
+	int sum = 0;
+	std::vector<double> prevADX(daysAmount, 0);
+
+	std::vector<double> prevDMP(daysAmount, 0);
+	std::vector<double> prevDMM(daysAmount, 0);
+	std::vector<double> prevTR(daysAmount, 0);
+
+	std::vector<double> prevHigh(daysAmount, INT_MIN);
+	std::vector<double> curHigh(daysAmount, INT_MIN);
+
+	std::vector<double> prevLow(daysAmount, INT_MAX);
+	std::vector<double> curLow(daysAmount, INT_MAX);
+
+	std::vector<double> prevClose;//?
+
+	std::vector<double> DMPSMA(daysAmount, 0);
+	std::vector<double> DMMSMA(daysAmount, 0);
+	std::vector<double> TRSMA(daysAmount, 0);
+	std::vector<double> DXSMA(daysAmount, 0);
+
+	std::vector<double> averages;
+
+	double firstHigh = INT_MIN;
+	double firstLow = INT_MAX;
+
+	std::vector<bool> hasDMPSMA(daysAmount, false);
+	std::vector<bool> hasDMMSMA(daysAmount, false);
+	std::vector<bool> hasTRSMA(daysAmount, false);
+	std::vector<bool> hasDXSMA(daysAmount, false);
+
+	std::vector<double> sumDMP(daysAmount, 0);
+	std::vector<double> sumDMM(daysAmount, 0);
+	std::vector<double> sumTR(daysAmount, 0);
+	std::vector<double> sumDX(daysAmount, 0);
+
+	for (int i = 0; i < prices.size(); i++)
+	{
+		int count = i % daysAmount;
+
+		if (i > daysAmount - 1) 
+		{
+			//find new high
+			if (prices[i - daysAmount] == prevHigh[count])
+			{
+				curHigh[count] = findMax(prices, i - daysAmount + 1, i + 1);
+			}
+			else if (prices[i] > prevHigh[count])
+			{
+				curHigh[count] = prices[i];
+			}
+			else
+			{
+				curHigh[count] = prevHigh[count];
+			}
+			//find new low
+			if (prices[i - daysAmount] == prevLow[count])
+			{
+				curLow[count] = findMin(prices, i - daysAmount + 1, i + 1);
+			}
+			else if (prices[i] < prevLow[count])
+			{
+				curLow[count] = prices[i];
+			}
+			else
+			{
+				curLow[count] = prevLow[count];
+			}
+			//calc dm plus
+
+			double DMP = curHigh[count] - prevHigh[count];
+			if (DMP < 0) DMP = 0;
+
+			double DMM = prevLow[count] - curLow[count];
+			if (DMM < 0) DMM = 0;
+
+			if (prevHigh[(count + 1) % daysAmount] == INT_MIN)
+			{
+				prevHigh[(count + 1) % daysAmount] = curHigh[count];
+			}
+			if (prevLow[(count + 1) % daysAmount] == INT_MAX)
+			{
+				prevLow[(count + 1) % daysAmount] = curLow[count];
+			}
+
+			double TR = std::max(
+				std::initializer_list<double>{ curHigh[count] - curLow[count], curHigh[count] - prices[i - daysAmount], prices[i - daysAmount] - curLow[count] });
+
+			if (!hasDMPSMA[count]/*&& (i + 1) % daysAmount == 0*/ || !hasDMMSMA[count])
+			{
+				sumDMP[count] += DMP;
+				sumDMM[count] += DMM;
+				sumTR[count] += TR;
+				//DMPSMA[count] += sumDMP;
+				//DMMSMA[count] += sumDMM;
+
+				if ((i + 1) / daysAmount == period)
+				{
+					DMPSMA[count] = sumDMP[count] / double(period);
+					hasDMPSMA[count] = true;
+
+					//prevEMA[count] = SMA[count];
+					prevDMP[count] = DMPSMA[count];
+
+
+					DMMSMA[count] = sumDMM[count] / double(period);
+					hasDMMSMA[count] = true;
+					prevDMM[count] = DMMSMA[count];
+
+					TRSMA[count] = sumTR[count] / double(period);
+					hasTRSMA[count] = true;
+					prevTR[count] = TRSMA[count];
+				}
+			}
+			else
+			{
+				DMP = (prevDMP[count] - prevDMP[count] / period) + DMP;
+
+				DMM = (prevDMM[count] - prevDMM[count] / period) + DMM;
+
+				TR = (prevTR[count] - prevTR[count] / period) + TR;
+
+				prevDMP[count] = DMP;
+				prevDMM[count] = DMM;
+				prevTR[count] = TR;
+
+				double posDI = (DMP / TR) * 100;
+				double negDI = (DMM / TR) * 100;
+
+				positiveDI.push_back(posDI);
+				negativeDI.push_back(negDI);
+
+				double DlDiff = abs(posDI - negDI);
+				double DlSum = posDI + negDI;
+
+				double DX = (DlDiff / DlSum) * 100;
+				if (!hasDXSMA[count])
+				{
+					sumDX[count] += DX;
+
+					if ((i + 1) / daysAmount == 2 * period + count)
+					{
+						hasDXSMA[count] = true;
+
+						DXSMA[count] = sumDX[count] / period;
+
+						prevADX[count] = DXSMA[count];
+
+						ADX.push_back(DXSMA[count]);
+					}
+				}
+				else
+				{
+					double curADX = prevADX[count] * (period - 1 + DX) / period;
+					ADX.push_back(curADX);
+					prevADX[count] = curADX;
+				}
+
+			}
+		}
+
+		else
+		{
+			//sum += prices[i];
+			if (prices[i] > firstHigh)
+			{
+				firstHigh = prices[i];
+			}
+			if (prices[i] < firstLow)
+			{
+				firstLow = prices[i];
+			}
+			if (i == daysAmount - 1)
+			{
+				prevHigh[0] = firstHigh;
+				prevLow[0] = firstLow;
 			}
 		}
 	}
