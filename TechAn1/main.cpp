@@ -171,11 +171,11 @@ void main()
 	std::vector<double> positiveDI;
 	std::vector<double> negativeDI;
 
-	calcADX(data, 7, 5, ADX, positiveDI, negativeDI);
+	calcADX(data, 3, 5, ADX, positiveDI, negativeDI);
 
-	save(ADX, "ADX_7_per5day.txt");
-	save(positiveDI, "positiveDI_7_per5day.txt");
-	save(negativeDI, "negativeDI_7_per5day.txt");
+	save(ADX, "ADX_3_per5day.txt");
+	save(positiveDI, "positiveDI_3_per5day.txt");
+	save(negativeDI, "negativeDI_3_per5day.txt");
 
 	/*calcEMATrendDirection(data, direction, 1, 3, 1, 5, 15, 5, shortEMA, longEMA);
 	save(direction, "EMA1per1_3_Delta_15_5_direction.txt");*/
@@ -1107,31 +1107,34 @@ void calcADX(std::vector<double> const& prices, int const& period, int const& da
 		if (i > daysAmount - 1) 
 		{
 			//find new high
-			if (prices[i - daysAmount] == prevHigh[count])
-			{
-				curHigh[count] = findMax(prices, i - daysAmount + 1, i + 1);
-			}
-			else if (prices[i] > prevHigh[count])
-			{
-				curHigh[count] = prices[i];
-			}
-			else
-			{
-				curHigh[count] = prevHigh[count];
-			}
-			//find new low
-			if (prices[i - daysAmount] == prevLow[count])
-			{
-				curLow[count] = findMin(prices, i - daysAmount + 1, i + 1);
-			}
-			else if (prices[i] < prevLow[count])
-			{
-				curLow[count] = prices[i];
-			}
-			else
-			{
-				curLow[count] = prevLow[count];
-			}
+			//if (prices[i - daysAmount] == prevHigh[count])
+			//{
+			//	curHigh[count] = findMax(prices, i - daysAmount + 1, i + 1);
+			//}
+			//else if (prices[i] > prevHigh[count])
+			//{
+			//	curHigh[count] = prices[i];
+			//}
+			//else
+			//{
+			//	curHigh[count] = prevHigh[count];
+			//}
+			////find new low
+			//if (prices[i - daysAmount] == prevLow[count])
+			//{
+			//	curLow[count] = findMin(prices, i - daysAmount + 1, i + 1);
+			//}
+			//else if (prices[i] < prevLow[count])
+			//{
+			//	curLow[count] = prices[i];
+			//}
+			//else
+			//{
+			//	curLow[count] = prevLow[count];
+			//}
+
+			curHigh[count] = findMax(prices, i - daysAmount + 1, i + 1);
+			curLow[count] = findMin(prices, i - daysAmount + 1, i + 1);
 			//calc dm plus
 
 			double DMP = curHigh[count] - prevHigh[count];
@@ -1150,7 +1153,11 @@ void calcADX(std::vector<double> const& prices, int const& period, int const& da
 			}
 
 			double TR = std::max(
-				std::initializer_list<double>{ curHigh[count] - curLow[count], curHigh[count] - prices[i - daysAmount], prices[i - daysAmount] - curLow[count] });
+				std::initializer_list<double>{ curHigh[count] - curLow[count], abs(curHigh[count] - prices[i - daysAmount]),
+				abs(prices[i - daysAmount] - curLow[count]) });
+
+			prevHigh[count] = curHigh[count];
+			prevLow[count] = curLow[count];
 
 			if (!hasDMPSMA[count]/*&& (i + 1) % daysAmount == 0*/ || !hasDMMSMA[count])
 			{
@@ -1180,11 +1187,11 @@ void calcADX(std::vector<double> const& prices, int const& period, int const& da
 			}
 			else
 			{
-				DMP = (prevDMP[count] - prevDMP[count] / period) + DMP;
+				DMP = (prevDMP[count] *(period - 1) + DMP ) / period;
 
-				DMM = (prevDMM[count] - prevDMM[count] / period) + DMM;
+				DMM = (prevDMM[count] * (period - 1) + DMM) / period;
 
-				TR = (prevTR[count] - prevTR[count] / period) + TR;
+				TR = (prevTR[count] * (period - 1) + TR) / period;
 
 				prevDMP[count] = DMP;
 				prevDMM[count] = DMM;
@@ -1217,7 +1224,7 @@ void calcADX(std::vector<double> const& prices, int const& period, int const& da
 				}
 				else
 				{
-					double curADX = prevADX[count] * (period - 1 + DX) / period;
+					double curADX = (prevADX[count] * (period - 1) + DX) / period;
 					ADX.push_back(curADX);
 					prevADX[count] = curADX;
 				}
