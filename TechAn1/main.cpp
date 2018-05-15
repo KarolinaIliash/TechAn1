@@ -147,6 +147,10 @@ void calcEMATrendDirection(std::vector<double> const& prices, std::vector<TrendD
 void calcADX(std::vector<double> const& prices, int const& period, int const& daysAmount, std::vector<double> & ADX,
 	std::vector<double> & positiveDI, std::vector<double> & negativeDI);
 
+void calcWilliamR(std::vector<double> const& prices, int period, std::vector<double> & R);
+
+void calcStochastic(std::vector<double> const& prices, int period, std::vector<double> & K, std::vector<double> & D);
+
 void main() 
 {
 	//std::string res = getData("EUR", "20180424", true);
@@ -171,11 +175,24 @@ void main()
 	std::vector<double> positiveDI;
 	std::vector<double> negativeDI;
 
-	calcADX(data, 3, 5, ADX, positiveDI, negativeDI);
+	/*calcADX(data, 3, 5, ADX, positiveDI, negativeDI);
 
 	save(ADX, "ADX_3_per5day.txt");
 	save(positiveDI, "positiveDI_3_per5day.txt");
-	save(negativeDI, "negativeDI_3_per5day.txt");
+	save(negativeDI, "negativeDI_3_per5day.txt");*/
+
+	/*std::vector<double> R;
+
+	calcWilliamR(data, 14, R);
+	save(R, "WilliamR_14.txt");*/
+
+
+	std::vector<double> K;
+	std::vector<double> D;
+	calcStochastic(data, 14, K, D);
+
+	save(K, "Stochastic_K_14.txt");
+	save(D, "Stochastic_D_14.txt");
 
 	/*calcEMATrendDirection(data, direction, 1, 3, 1, 5, 15, 5, shortEMA, longEMA);
 	save(direction, "EMA1per1_3_Delta_15_5_direction.txt");*/
@@ -1058,7 +1075,7 @@ void calcEMATrendDirection(std::vector<double> const& prices, std::vector<TrendD
 			disp = calcDispersionPerDay(deltas[i], 0, deltas[i], deltaSMA[i], 1, deltaPeriod, i);
 		}
 
-		dispDelta.push_back(disp);
+		dispDelta.push_back(sqrt(disp));
 	}
 }
 
@@ -1247,6 +1264,64 @@ void calcADX(std::vector<double> const& prices, int const& period, int const& da
 			{
 				prevHigh[0] = firstHigh;
 				prevLow[0] = firstLow;
+			}
+		}
+	}
+}
+
+void calcWilliamR(std::vector<double> const& prices, int period, std::vector<double> & R)
+{
+	
+	for (int i = 0; i < prices.size(); i++)
+	{
+		if (i >= period)
+		{
+			double high = findMax(prices, i - period + 1, i + 1);
+
+			double low = findMin(prices, i - period + 1, i + 1);
+
+			double curR = ((high - prices[i]) / (high - low)) * -100;
+
+			R.push_back(curR);
+		}
+	}
+}
+
+void calcStochastic(std::vector<double> const& prices, int period, std::vector<double> & K, std::vector<double> & D)
+{
+	int dSmoothPeriod = 3;
+
+	double sum = 0;
+
+	for (int i = 0; i < prices.size(); i++)
+	{
+		if (i >= period)
+		{
+			double low = findMin(prices, i - period + 1, i + 1);
+			double high = findMax(prices, i - period + 1, i + 1);
+
+			double curK = 100 * (prices[i] - low) / (high - low);
+
+			K.push_back(curK);
+
+			if (i > period + dSmoothPeriod - 1)
+			{
+				sum += curK;
+				sum -= K[i - dSmoothPeriod - period];
+
+				double curD = sum / dSmoothPeriod;
+
+				D.push_back(curD);
+			}
+
+			else
+			{
+				sum += curK;
+				if (i == period + dSmoothPeriod - 1)
+				{
+					double curD = sum / dSmoothPeriod;
+					D.push_back(curD);
+				}
 			}
 		}
 	}
