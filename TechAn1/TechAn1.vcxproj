@@ -124,6 +124,8 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="all.hpp" />
+    <ClInclude Include="manager\Manager.hpp" />
     <ClInclude Include="oscillators\RSI.hpp" />
     <ClInclude Include="oscillators\RSI_EMA.hpp" />
     <ClInclude Include="oscillators\RSI_SMA.hpp" />

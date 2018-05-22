@@ -62,5 +62,11 @@
     <ClInclude Include="trend_indicators\CustomTrendDirection.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="manager\Manager.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="all.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
