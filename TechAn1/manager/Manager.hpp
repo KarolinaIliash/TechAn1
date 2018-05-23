@@ -26,10 +26,26 @@ public:
 
 
 public:
-	void start() {}
+	void start(std::vector<double> const& prices) 
+	{
+		for (int i = 0; i < prices.size(); i++)
+		{
+			manageRSI(prices, i);
+		}
+	}
 
-	bool buySignal() {}
-	bool selSignal() {}
+	bool buySignal(int i) 
+	{
+		signals[i] = 1;
+		buySignalsDays.push_back(i);
+		return false;
+	}
+	bool selSignal(int i) 
+	{
+		signals[i] = -1;
+		sellSignalsDays.push_back(i);
+		return false;
+	}
 
 	void setState(double value, RSI_States & state)
 	{
@@ -49,36 +65,62 @@ public:
 
 	void manageRSI(std::vector<double> const& prices, int i)
 	{
+		if (signals.size() != prices.size()) 
+		{
+			signals.assign(prices.size(), 0);
+		}
+
 		static RSI_States state;
 
-		int levelToBreak = -1;
+		static double levelToBreak = -1;
+
+		static bool started = false;
+		static bool stateSet = false;
 
 		double curRsi = rsi1.calculate(prices, i);
-		if (i == 0)
+
+		if (!started && curRsi != 0)
+		{
+			started = true;
+		}
+
+		if (started && !stateSet)
 		{
 			setState(curRsi, state);
+			stateSet = true;
 		}
-		else
+
+		if (i == 180)
+		{
+			int a = 1;
+		}
+
+		else if(stateSet)
 		{
 			switch (state)
 			{
 			case OverSold:
-				if (curRsi > 30 && curRsi <= 50)
+				if (curRsi > 30 /*&& curRsi <= 50*/)
 				{
-					if (buySignal) state = Wait;
-					else state = FirstRiseBeforeBottomFailureSwing;
+					if (buySignal(i)) state = Wait;
+					else if (curRsi <= 50)
+						state = FirstRiseBeforeBottomFailureSwing;
+					else
+						state = Wait;
 				}
-				else if (curRsi > 50 && curRsi < 70) state = Wait; // Need think about this checkings
-				else state = OverBought;
+				//else if (curRsi > 50 && curRsi < 70) state = Wait; // Need think about this checkings
+				//else if(curRsi >= 70) state = OverBought;
+				if (curRsi >= 70) state = OverBought;
 				break;
 			case OverBought:
-				if (curRsi < 70 && curRsi >= 50)
+				if (curRsi < 70 /*&& curRsi >= 50*/)
 				{
-					if (selSignal) state = Wait;
-					else state = FirstFallBeforeTopFailureSwing;
+					if (selSignal(i)) state = Wait;
+					else if(curRsi >= 50) state = FirstFallBeforeTopFailureSwing;
+					else state = Wait;
 				}
-				else if (curRsi < 50 && curRsi > 30) state = Wait;
-				else state = OverSold;
+				//else if (curRsi < 50 && curRsi > 30) state = Wait;
+				/*else */if(curRsi <= 30) state = OverSold;
 				break;
 			case Wait:
 				if (curRsi <= 30) state = OverSold;
@@ -86,11 +128,12 @@ public:
 				break;
 			case FirstRiseBeforeBottomFailureSwing:
 				if (curRsi > 50) state = Wait;
-				else if (curRsi < rsi_res.back())
+				else if (curRsi < rsi_res.back() && curRsi > 30)
 				{
 					state = FallBeforeBottomFailureSwing; 
 					levelToBreak = rsi_res.back();
 				}
+				else if (curRsi <= 30) state = OverSold;
 				break;
 			case FallBeforeBottomFailureSwing:
 				if (curRsi <= 30) state = OverSold;
@@ -99,7 +142,7 @@ public:
 			case SecondRiseBeforeBottomFailureSwing:
 				if (curRsi >= levelToBreak) 
 				{
-					buySignal();
+					buySignal(i);
 					state = Wait;
 				}
 				else if (curRsi <= 30) state = OverSold;
@@ -108,11 +151,12 @@ public:
 				break;
 			case FirstFallBeforeTopFailureSwing:
 				if (curRsi < 50) state = Wait;
-				else if (curRsi > rsi_res.back())
+				else if (curRsi > rsi_res.back() && curRsi < 70)
 				{
 					state = RiseBeforeTopFailureSwing;
 					levelToBreak = rsi_res.back();
 				}
+				else if (curRsi >= 70) state = OverBought;
 				break;
 			case RiseBeforeTopFailureSwing:
 				if (curRsi >= 70) state = OverBought;
@@ -121,7 +165,7 @@ public:
 			case SecondFallBeforeTopFailureSwing:
 				if (curRsi <= levelToBreak)
 				{
-					selSignal();
+					selSignal(i);
 					state = Wait;
 				}
 				else if (curRsi <= 30) state = OverSold;
@@ -134,6 +178,14 @@ public:
 		rsi_res.push_back(curRsi);
 	}
 
+	std::vector<int> getSignals() { return signals; }
+
+	std::vector<double> getRSIRes() { return rsi_res; }
+
+
+	std::vector<int> sellSignalsDays;
+	std::vector<int> buySignalsDays;
+
 private:
 
 	
@@ -144,6 +196,9 @@ private:
 
 	RSI_EMA rsi1;
 	std::vector<double> rsi_res;
+
+	std::vector<int> signals;
+
 	//WilliamR williamR;
 	//Stochastic stochastic;
 };

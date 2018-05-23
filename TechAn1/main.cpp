@@ -11,6 +11,8 @@
 
 #include <trend_indicators/CustomTrendDirection.hpp>
 
+#include <manager\Manager.hpp>
+
 std::vector<double> getData(std::string fileName)
 {
 	std::ifstream in(fileName);
@@ -212,9 +214,32 @@ void main()
 	//std::string res = getData("EUR", "20180424", true);
 	//std::string fileName = "pricesComma.txt";
 	//std::string fileName = "pricesUSDComma.txt";
-	std::string fileName = "prices.txt";
+	//std::string fileName = "prices.txt";
+	
+	std::string fileName = "pricesEurWithoutWeekend.txt";
 	std::vector<double> data = getData(fileName);
+	/*std::string comma = "pricesEurWithoutWeekend_comma.txt";
+	rewriteWithCommas(fileName, comma);
 
+	fileName = "pricesUsdWithoutWeekend.txt";
+	comma = "pricesUsdWithoutWeekend_comma.txt";
+	rewriteWithCommas(fileName, comma);*/
+
+
+	Manager manager;
+
+	manager.start(data);
+
+
+	std::vector <double> rsi = manager.getRSIRes();
+	std::vector<int> signals = manager.getSignals();
+
+	std::vector<int> sellSignalsDays = manager.sellSignalsDays;
+	std::vector<int> buySignalsDays = manager.buySignalsDays;
+	save(sellSignalsDays, "sellSignalsDays_no_weekends.txt");
+	save(buySignalsDays, "buySignalsDays_no_weekeds.txt");
+	save(rsi, "rsi_ema_14_from_manager_no_weekends.txt");
+	save(signals, "rsi_ema_14_signals_no_weekends.txt");
 	//std::vector<double> firstEma, allEMA10, allEMA20, RSI_SMA, RSI_EMA, RSI_WSM;
 	//calculateAll(data, allEMA10, allEMA20, RSI_SMA, RSI_EMA, RSI_WSM);
 	//std::vector<double> EMA3, EMA21, AroonUp, AroonDown;
@@ -237,9 +262,9 @@ void main()
 
 	save(RSI_EMA_14, "RSI_EMA_14_class.txt");*/
 
-	calcDirWithClassFix(data, 15, 5, NO, 1, 1, 0, direction, 2, 1, 0.5);
+	/*calcDirWithClassFix(data, 15, 5, NO, 1, 1, 0, direction, 2, 1, 0.5);
 
-	save(direction, "direction_15_5_class_fix.txt");
+	save(direction, "direction_15_5_class_fix.txt");*/
 
 	/*calcADX(data, 7, 5, ADX, positiveDI, negativeDI);
 
@@ -527,34 +552,34 @@ void calculateAll(std::vector<double> const& data, std::vector<double> & allEMA1
 //TODO try give to RSI and roon not prices but their sma or ema (daily) maybe about 13 period 
 
 
-size_t findMaxIndex(std::vector<double> const& data, size_t from, size_t to)
-{
-	return std::distance(data.begin(), std::max_element(data.begin() + from, data.begin() + to));
-
-	//try this, i actually don't remember but 
-	// return std::distance(std::max_element(data.begin() + from, data.begin() + to), data.begin() + to);
-}
-
-size_t findMinIndex(std::vector<double> const& data, size_t from, size_t to)
-{
-	return std::distance(data.begin(), std::min_element(data.begin() + from, data.begin() + to));
-
-	//try this, i actually don't remember but 
-	// return std::distance(std::min_element(data.begin() + from, data.begin() + to), data.begin() + to);
-}
-
-template<typename T>
-T findMax(std::vector<T> const& data, size_t from, size_t to)
-{
-	return *std::max_element(data.begin() + from, data.begin() + to);
-}
-
-
-template<typename T>
-T findMin(std::vector<T> const& data, size_t from, size_t to)
-{
-	return *std::min_element(data.begin() + from, data.begin() + to);
-}
+//size_t findMaxIndex(std::vector<double> const& data, size_t from, size_t to)
+//{
+//	return std::distance(data.begin(), std::max_element(data.begin() + from, data.begin() + to));
+//
+//	//try this, i actually don't remember but 
+//	// return std::distance(std::max_element(data.begin() + from, data.begin() + to), data.begin() + to);
+//}
+//
+//size_t findMinIndex(std::vector<double> const& data, size_t from, size_t to)
+//{
+//	return std::distance(data.begin(), std::min_element(data.begin() + from, data.begin() + to));
+//
+//	//try this, i actually don't remember but 
+//	// return std::distance(std::min_element(data.begin() + from, data.begin() + to), data.begin() + to);
+//}
+//
+//template<typename T>
+//T findMax(std::vector<T> const& data, size_t from, size_t to)
+//{
+//	return *std::max_element(data.begin() + from, data.begin() + to);
+//}
+//
+//
+//template<typename T>
+//T findMin(std::vector<T> const& data, size_t from, size_t to)
+//{
+//	return *std::min_element(data.begin() + from, data.begin() + to);
+//}
 
 void calc(std::vector<double> const& data, std::vector<double> & EMA3, std::vector<double> & EMA21,
 	std::vector<double> & AroonUp, std::vector<double> & AroonDown)
