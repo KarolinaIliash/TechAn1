@@ -229,9 +229,13 @@ void main()
 	Manager manager;
 
 	manager.start(data);
+	std::vector<double> aroonUp = manager.getAroonUp();
+	std::vector<double> aroonDown = manager.getAroonDown();
 
+	save(aroonUp, "aroonUp_25_manager.txt");
+	save(aroonDown, "aroonDown_25_manager.txt");
 
-	std::vector <double> rsi = manager.getRSIRes();
+	/*std::vector <double> rsi = manager.getRSIRes();
 	std::vector<int> signals = manager.getSignals();
 
 	std::vector<int> sellSignalsDays = manager.sellSignalsDays;
@@ -239,7 +243,7 @@ void main()
 	save(sellSignalsDays, "sellSignalsDays_no_weekends.txt");
 	save(buySignalsDays, "buySignalsDays_no_weekeds.txt");
 	save(rsi, "rsi_ema_14_from_manager_no_weekends.txt");
-	save(signals, "rsi_ema_14_signals_no_weekends.txt");
+	save(signals, "rsi_ema_14_signals_no_weekends.txt");*/
 	//std::vector<double> firstEma, allEMA10, allEMA20, RSI_SMA, RSI_EMA, RSI_WSM;
 	//calculateAll(data, allEMA10, allEMA20, RSI_SMA, RSI_EMA, RSI_WSM);
 	//std::vector<double> EMA3, EMA21, AroonUp, AroonDown;

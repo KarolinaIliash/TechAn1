@@ -14,10 +14,10 @@ public:
 	{
 		std::pair<double, double> res(0, 0);
 
-		if (i >= period)
+		if (i >= period - 1)
 		{
-			double curAroonUp = ((period - (i - findMaxIndex(data, i - period, i))) / period) * 100;
-			double curAroonDown = ((period - (i - findMinIndex(data, i - period, i))) / period) * 100;
+			double curAroonUp = (double(period - 1 - (i - findMaxIndex(data, i - period + 1, i + 1))) / (double)(period - 1)) * 100;
+			double curAroonDown = (double(period - 1 - (i - findMinIndex(data, i - period + 1, i + 1))) / (double)(period - 1)) * 100;
 
 			AroonUp.push_back(curAroonUp);
 			AroonDown.push_back(curAroonDown);

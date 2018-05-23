@@ -2,8 +2,6 @@
 
 #include "all.hpp"
 
-//TODO!!! - fix utils and check aroon
-
 enum RSI_States
 {
 	OverSold,
@@ -22,7 +20,7 @@ class Manager
 {
 
 public:
-	Manager() : rsi1(14) {}
+	Manager() : rsi1(14), aroon(25) {}
 
 
 public:
@@ -30,9 +28,18 @@ public:
 	{
 		for (int i = 0; i < prices.size(); i++)
 		{
-			manageRSI(prices, i);
+			//manageRSI(prices, i);
+			calcAroon(prices, i);
 		}
 	}
+
+	void calcAroon(std::vector<double> const& prices, int i)
+	{
+		std::pair<double, double> aroon_res = aroon.calculate(prices, i);
+		aroonUp.push_back(aroon_res.first);
+		aroonDown.push_back(aroon_res.second);
+	}
+
 
 	bool buySignal(int i) 
 	{
@@ -186,13 +193,17 @@ public:
 	std::vector<int> sellSignalsDays;
 	std::vector<int> buySignalsDays;
 
+
+	std::vector<double> getAroonUp() { return aroonUp; }
+	std::vector<double> getAroonDown() { return aroonDown; }
 private:
 
-	
+	std::vector<double> aroonUp;
+	std::vector<double> aroonDown;
 
 	//CustomTrendDirection custom(1, NON, 1, 15, 5, true, );
 	//ADX adx;
-	//Aroon aroon;
+	Aroon aroon;
 
 	RSI_EMA rsi1;
 	std::vector<double> rsi_res;
